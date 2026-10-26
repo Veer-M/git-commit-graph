@@ -12,3 +12,6 @@ results/
 *.png
 devices.json
 tape_dispense.gcode
+/current-history.json
+/demo-output/
+!examples/*.png

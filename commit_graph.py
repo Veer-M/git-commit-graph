@@ -1,83 +1,110 @@
 import argparse
-import subprocess
+import json
+from pathlib import Path
+from history import export_data, read_history, statistics, topological_order
 
 def read_log(repository='.', limit=100, all_refs=False):
-    if limit < 1:
-        raise ValueError('Limit must be positive')
-    command = ['git','-C',str(repository),'log','--topo-order',f'--max-count={limit}','--pretty=format:%H|%P']
-    if all_refs:
-        command.append('--all')
-    result = subprocess.run(command, text=True, capture_output=True, check=False)
-    if result.returncode:
-        raise ValueError(result.stderr.strip() or 'Cannot read Git history')
-    graph = {}
-    for line in result.stdout.splitlines():
-        commit, parents = line.split('|',1)
-        graph[commit] = parents.split()
-    return graph
+    return {c.sha:c.parents for c in read_history(repository,limit,all_refs)}
 
 def layout(graph):
-    lanes = []
-    positions = {}
-    for row, (commit, parents) in enumerate(graph.items()):
+    lanes,positions = [],{}
+    for row,commit in enumerate(topological_order(graph)):
         if commit not in lanes:
-            lanes.append(commit)
+            if None in lanes:
+                lanes[lanes.index(None)] = commit
+            else:
+                lanes.append(commit)
         lane = lanes.index(commit)
         positions[commit] = (lane,row)
         lanes[lane] = None
-        for index, parent in enumerate(parents):
-            if parent in lanes or parent in positions:
+        for index,parent in enumerate(graph[commit]):
+            if parent not in graph or parent in lanes or parent in positions:
                 continue
             if index == 0 and lanes[lane] is None:
                 lanes[lane] = parent
+            elif None in lanes:
+                lanes[lanes.index(None)] = parent
             else:
-                try:
-                    vacant = lanes.index(None)
-                    lanes[vacant] = parent
-                except ValueError:
-                    lanes.append(parent)
+                lanes.append(parent)
     return positions
 
-def plot(graph, output=None, show=True):
+def short(text, width=65):
+    return text if len(text) <= width else text[:width-1]+'…'
+
+def plot(graph, output=None, show=True, metadata=None, subjects=True):
+    import matplotlib
+    if not show:
+        matplotlib.use('Agg')
     import matplotlib.pyplot as plt
-    points = layout(graph)
-    figure, axes = plt.subplots(figsize=(8,max(3,min(30,len(graph)*0.28))))
-    for commit, parents in graph.items():
-        x,y = points[commit]
+    positions = layout(graph)
+    details = {c.sha:c for c in metadata or []}
+    lane_count = 1+max((p[0] for p in positions.values()),default=0)
+    figure,axes = plt.subplots(figsize=(12,min(100,max(3,len(graph)*0.32+1))))
+    figure.patch.set_facecolor('#101820')
+    axes.set_facecolor('#101820')
+    palette = ['#57c4e5','#ffb454','#b8de6f','#d7aefb','#ff8299','#71dbc3']
+    label_column = lane_count+0.3
+    for commit in topological_order(graph):
+        parents = graph[commit]
+        x,y = positions[commit]
+        color = palette[x%len(palette)]
         for parent in parents:
-            if parent in points:
-                px,py = points[parent]
-                axes.plot([x,px],[y,py],color=f'C{x%10}',linewidth=1.5,zorder=1)
-        axes.scatter([x],[y],color=f'C{x%10}',s=35,zorder=2)
-        axes.annotate(commit[:7],(x,y),xytext=(8,0),textcoords='offset points',fontsize=8)
+            if parent in positions:
+                px,py = positions[parent]
+                bend = y+0.45
+                axes.plot([x,x,px,px],[y,bend,bend,py],color=color,linewidth=1.8,zorder=1,alpha=0.85)
+            else:
+                axes.annotate('',xy=(x,y+0.7),xytext=(x,y+0.15),
+                              arrowprops={'arrowstyle':'->','color':color,'linestyle':'dashed'})
+        axes.scatter([x],[y],color=color,s=50,edgecolor='#101820',linewidth=1,zorder=2)
+        detail = details.get(commit)
+        label = commit[:7]
+        if detail is not None:
+            if subjects:
+                label += '  '+short(detail.subject)
+            if detail.refs:
+                label += '  ['+short(detail.refs,55)+']'
+        axes.text(label_column,y,label,va='center',fontsize=9,color='#edf4f7',fontfamily='DejaVu Sans')
     if not graph:
-        axes.text(0.5,0.5,'No commits',ha='center',transform=axes.transAxes)
-    axes.invert_yaxis()
-    axes.set_xlabel('History lane')
-    axes.set_ylabel('Topological order (newest first)')
-    axes.set_title('Git commit ancestry')
-    axes.margins(x=0.3,y=0.05)
+        axes.text(0.5,0.5,'No commits',ha='center',color='white',transform=axes.transAxes)
+    summary = statistics(graph)
+    axes.set_title(f"Git history · {summary['commits']} commits · {summary['merges']} merges",color='white',pad=16)
+    axes.set_ylim(max(len(graph)-0.3,1),-0.8)
+    axes.set_xlim(-0.5,label_column+max(6,lane_count*0.3))
+    axes.axis('off')
     figure.tight_layout()
     if output:
-        figure.savefig(output,dpi=160)
+        Path(output).parent.mkdir(parents=True,exist_ok=True)
+        figure.savefig(output,dpi=160,facecolor=figure.get_facecolor(),bbox_inches='tight')
     if show:
         plt.show()
     plt.close(figure)
-    return points
+    return positions
 
 def main():
-    parser = argparse.ArgumentParser(description='Plot actual Git commit ancestry')
+    parser = argparse.ArgumentParser(description='Plot Git ancestry with commit subjects and branch labels')
     parser.add_argument('repository',nargs='?',default='.')
     parser.add_argument('--limit',type=int,default=100)
-    parser.add_argument('--all',action='store_true')
-    parser.add_argument('--output')
+    scope = parser.add_mutually_exclusive_group()
+    scope.add_argument('--all',action='store_true')
+    scope.add_argument('--ref',help='One branch, tag, or commit to follow')
+    parser.add_argument('--output',help='PNG, SVG, or PDF image path')
+    parser.add_argument('--json',dest='json_output',help='Save commit metadata, layout, and statistics')
     parser.add_argument('--no-show',action='store_true')
+    parser.add_argument('--no-subjects',action='store_true')
     args = parser.parse_args()
     try:
-        graph = read_log(args.repository,args.limit,args.all)
-    except ValueError as error:
+        commits = read_history(args.repository,args.limit,args.all,args.ref)
+        graph = {c.sha:c.parents for c in commits}
+        positions = plot(graph,args.output,not args.no_show,commits,not args.no_subjects)
+    except (ValueError,OSError) as error:
         parser.error(str(error))
-    plot(graph,args.output,not args.no_show)
+    data = export_data(commits,positions)
+    if args.json_output:
+        target = Path(args.json_output)
+        target.parent.mkdir(parents=True,exist_ok=True)
+        target.write_text(json.dumps(data,indent=2,ensure_ascii=False)+'\n',encoding='utf-8')
+    print(json.dumps(data['statistics'],indent=2))
 
 if __name__ == '__main__':
     main()

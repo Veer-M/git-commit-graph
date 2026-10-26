@@ -1,0 +1,103 @@
+{
+  "statistics": {
+    "commits": 7,
+    "visible_parent_edges": 7,
+    "boundary_parent_edges": 0,
+    "merges": 1,
+    "roots": 1,
+    "branch_points": 2,
+    "tips": 2
+  },
+  "commits": [
+    {
+      "sha": "879b4237015b80988c367be1471ffe0d4671e6d6",
+      "parents": [
+        "4bf94e963d61675bafa91d7bb045b2f1bccd9a33"
+      ],
+      "author": "Demo",
+      "date": "2026-10-26T19:12:38-04:00",
+      "subject": "Export movement statistics",
+      "refs": "feature/reports",
+      "lane": 0,
+      "row": 0,
+      "outside_view_parents": []
+    },
+    {
+      "sha": "3de1fbf692a50fe666c07d47db6a2bcbfc6df32b",
+      "parents": [
+        "4bf94e963d61675bafa91d7bb045b2f1bccd9a33"
+      ],
+      "author": "Demo",
+      "date": "2026-10-26T19:12:38-04:00",
+      "subject": "Document sample workflow",
+      "refs": "HEAD -> main",
+      "lane": 1,
+      "row": 1,
+      "outside_view_parents": []
+    },
+    {
+      "sha": "4bf94e963d61675bafa91d7bb045b2f1bccd9a33",
+      "parents": [
+        "a56f15415ad8bfd1f38e909a35c47c8b785f1336",
+        "71c08226c8892c968ec3f6848b9d787649cb6c1c"
+      ],
+      "author": "Demo",
+      "date": "2026-10-26T19:12:38-04:00",
+      "subject": "Merge tracking feature",
+      "refs": "tag: v1.0",
+      "lane": 0,
+      "row": 2,
+      "outside_view_parents": []
+    },
+    {
+      "sha": "71c08226c8892c968ec3f6848b9d787649cb6c1c",
+      "parents": [
+        "8cf33f7f08126c0f1a81a7b1b5515a6da1bfb46c"
+      ],
+      "author": "Demo",
+      "date": "2026-10-26T19:12:37-04:00",
+      "subject": "Keep object IDs between frames",
+      "refs": "feature/tracking",
+      "lane": 1,
+      "row": 3,
+      "outside_view_parents": []
+    },
+    {
+      "sha": "8cf33f7f08126c0f1a81a7b1b5515a6da1bfb46c",
+      "parents": [
+        "ffeca6a8a3ad89ff1b6b1d0de68a38bebb91ebb4"
+      ],
+      "author": "Demo",
+      "date": "2026-10-26T19:12:37-04:00",
+      "subject": "Detect colored markers",
+      "refs": "",
+      "lane": 1,
+      "row": 4,
+      "outside_view_parents": []
+    },
+    {
+      "sha": "a56f15415ad8bfd1f38e909a35c47c8b785f1336",
+      "parents": [
+        "ffeca6a8a3ad89ff1b6b1d0de68a38bebb91ebb4"
+      ],
+      "author": "Demo",
+      "date": "2026-10-26T19:12:37-04:00",
+      "subject": "Add command-line configuration",
+      "refs": "",
+      "lane": 0,
+      "row": 5,
+      "outside_view_parents": []
+    },
+    {
+      "sha": "ffeca6a8a3ad89ff1b6b1d0de68a38bebb91ebb4",
+      "parents": [],
+      "author": "Demo",
+      "date": "2026-10-26T19:12:37-04:00",
+      "subject": "Start example project",
+      "refs": "",
+      "lane": 1,
+      "row": 6,
+      "outside_view_parents": []
+    }
+  ]
+}
